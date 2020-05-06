@@ -68,10 +68,10 @@ module Env : ENV =
     let empty () : env = [] ;;
 
     let close (exp : expr) (env : env) : value =
-      failwith "close not implemented" ;;
+      Closure (exp, env) ;;
 
     let lookup (env : env) (varname : varid) : value =
-      failwith "lookup not implemented" ;;
+      !(List.assoc varname env) ;;
 
     let extend (env : env) (varname : varid) (loc : value ref) : env =
       failwith "extend not implemented" ;;
@@ -108,15 +108,61 @@ module Env : ENV =
 (* The TRIVIAL EVALUATOR, which leaves the expression to be evaluated
    essentially unchanged, just converted to a value for consistency
    with the signature of the evaluators. *)
+
+
    
 let eval_t (exp : expr) (_env : Env.env) : Env.value =
   (* coerce the expr, unchanged, into a value *)
   Env.Val exp ;;
 
 (* The SUBSTITUTION MODEL evaluator -- to be completed *)
+
+let val_to_e (Env.Val value : Env.value) = value ;;
+
+let unopeval (uop : unop) (Env.Val e : Env.value) : Env.value =
+  match uop, e with
+  | Negate, Num x -> Env.Val (Num (~- x))
+  | Negate, _ -> raise (EvalError "cannot be negated") ;;
+
+let binopeval (bin : binop) (Env.Val e1 : Env.value) (Env.Val e2 : Env.value) : Env.value = 
+  match bin, e1, e2 with
+  (* Plus *)
+  | Plus, Num x1, Num x2 -> Env.Val (Num (x1 + x2))
+  | Plus, _, _ -> raise (EvalError "Cateogry Error")
+  (* Minus *)
+  | Minus, Num x1, Num x2 -> Env.Val (Num (x1 - x2))
+  | Minus, _, _ -> raise (EvalError "Cateogry Error")
+  (* Times *)
+  | Times, Num x1, Num x2 -> Env.Val (Num (x1 * x2))
+  | Times, _, _ -> raise (EvalError "Cateogry Error")
+  (* Equals *)
+  | Equals, Num x1, Num x2 -> Env.Val (Bool (x1 = x2))
+  | Equals, Bool x1, Bool x2 -> Env.Val (Bool (x1 = x2))
+  | Equals, _, _ -> raise (EvalError "Cateogry Error")
+  (* LessThan *)
+  | LessThan, Num x1, Num x2 -> Env.Val (Bool (x1 < x2))
+  | LessThan, _, _ -> raise (EvalError "Cateogry Error")
+;; 
+
    
 let eval_s (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_s not implemented" ;;
+  let rec eval_s (_exp : expr) : Env.value =
+    match _exp with
+    | Var a -> raise (EvalError ("Unbound" ^ a))                    
+    | Num _ | Bool _ | Fun _ | Unassigned  -> Env.Val _exp                                                
+    | Unop (un, e1) -> unopeval un (eval_s e1)                
+    | Binop (bin, e1, e2) -> binopeval bin (eval_s e1) (eval_s e2)     
+    | Conditional (c, c1, c2) -> 
+        if (eval_s c = Env.Val (Bool true)) then eval_s c1 
+        else eval_s c2            
+    | Let (var, e1, e2) -> eval_s (subst var (val_to_e (eval_s e1)) e2)        
+    | Letrec (var, e1, e2) -> eval_s (subst var (subst var (Letrec (var, e1, Var var)) e1)e2)  
+    | Raise -> raise EvalException          
+    | App (e1, e2) -> 
+        match eval_s e1 with 
+        | Env.Val Fun (a, b) -> eval_s (subst a (val_to_e (eval_s e2)) b)
+        | _ -> raise (EvalError "does not work")
+  in eval_s _exp ;; 
      
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
@@ -146,4 +192,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_t ;;
+let evaluate = eval_s ;;
