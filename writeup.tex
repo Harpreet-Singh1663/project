@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{CS51 Project Write-up}
+\author{Harpreet Singh}
+\date{May 2020}
+
+\begin{document}
+
+\maketitle
+
+The extensions that I included were of the basic kind listed under number 1 in stage 8. Essentially, I implemented two more atomic types into the project, which are float and string. The process for including the two atomic types were very similar, starting with adding them into the expr type. From there, it was just a matter of updating the match statements of functions such as free-vars, subs, exp-to-concrete-string, and exp-to-abstract-string. Furthermore, evals also had to be updated in order to have match statements that deal with floats and strings. Helper functions that assist with the unop and binop cases also had to be updated with the float atomic type, however, strings do not need to be updated in this manner.
+\end{document}

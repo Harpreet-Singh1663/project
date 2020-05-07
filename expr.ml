@@ -24,6 +24,8 @@ type varid = string ;;
 type expr =
   | Var of varid                         (* variables *)
   | Num of int                           (* integers *)
+  | Float of float                       (* floats *)
+  | String of string                     (* strings *)
   | Bool of bool                         (* booleans *)
   | Unop of unop * expr                  (* unary operators *)
   | Binop of binop * expr * expr         (* binary operators *)
@@ -66,7 +68,7 @@ let vars_of_list : string list -> varidset =
 let rec free_vars (exp : expr) : varidset =
   match exp with 
   | Var x -> SS.singleton x
-  | Num _ | Bool _ -> SS.empty
+  | Num _ | Bool _ | Float _ | String _ -> SS.empty
   | Unop (_, exp1) -> free_vars exp1
   | Binop (_, exp1, exp2) -> SS.union (free_vars exp1) (free_vars exp2)
   | Conditional (c, c1, c2) -> SS.union (SS.union (free_vars c) (free_vars c1)) (free_vars c2)
@@ -100,7 +102,7 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
   let rec subst2 (exp : expr) =
     match exp with
     | Var x -> if x = var_name then repl else exp
-    | Num _ | Bool _ -> exp               
+    | Num _ | Bool _ | Float _ | String _ -> exp               
     | Unop (un, e1) -> Unop (un, subst2 e1)      
     | Binop (bin, e1, e2) -> Binop (bin, subst2 e1, subst2 e2)  
     | Conditional (c, c1, c2) -> Conditional (subst2 c, subst2 c1, subst2 c2)
@@ -159,7 +161,9 @@ let string_of_binop (b : binop) : string =
 let rec exp_to_concrete_string (exp : expr) : string =
   match exp with
   | Var a -> a                        
-  | Num n -> string_of_int n                     
+  | Num n -> string_of_int n
+  | Float f -> string_of_float f 
+  | String s -> "\"" ^ s ^ "\""                     
   | Bool b -> string_of_bool b                       
   | Unop (un, exp1) -> string_of_unop un ^ exp_to_concrete_string exp1      
   | Binop (bin, exp1, exp2) -> "(" ^ exp_to_concrete_string exp1 ^ " " ^ string_of_binop bin ^ " " ^ exp_to_concrete_string exp2 ^ ")" 
@@ -179,6 +183,8 @@ let rec exp_to_abstract_string (exp : expr) : string =
   match exp with
   | Var a -> "Var(" ^ a ^ ")"
   | Num n -> "Num(" ^ string_of_int n ^ ")"
+  | Float f -> "Float(" ^ string_of_float f ^ ")" 
+  | String s -> "String(" ^ s ^ ")" 
   | Bool b -> "Bool(" ^ string_of_bool b ^")"
   | Unop (un, e1) -> "Unop(" ^ string_of_unop un ^ "," ^ exp_to_abstract_string e1 ^ ")"
   | Binop (bin, e1, e2) -> "Binop(" ^ string_of_binop bin ^ "," ^ exp_to_abstract_string e1 ^ "," ^  exp_to_abstract_string e2 ^ ")"

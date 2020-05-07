@@ -74,13 +74,23 @@ module Env : ENV =
       !(List.assoc varname env) ;;
 
     let extend (env : env) (varname : varid) (loc : value ref) : env =
-      failwith "extend not implemented" ;;
+      try
+        let a = lookup env varname in
+        List.map (fun (name, value) -> if name = varname then (name, loc) else (name, value)) env
+      with
+        Not_found -> (varname, loc) :: env;;
 
-    let value_to_string ?(printenvp : bool = true) (v : value) : string =
-      failwith "value_to_string not implemented" ;;
+    let value_to_string ?(printenvp : bool = true) (v : value) : string = failwith "not implemented";;
+  
+      (*match v with
+      | Val a -> if printenvp then exp_to_concrete_string exp ^ "in environment: " ^ env_to_concrete_string env
+                 else exp_to_concrete_string exp;;*)
 
-    let env_to_string (env : env) : string =
-      failwith "env_to_string not implemented" ;;
+    let env_to_string (env : env) : string = failwith "not implemented";;
+      (*match env with
+      | [] -> ""
+      | (v, vref) :: [] -> var ^ "=" ^ value_to_string !valref
+      | (v, vref) :: tl -> var ^ "=" ^ value_to_string !valref ^ ", " ^ env_to_string tl;;*)
   end
 ;;
 
@@ -121,26 +131,33 @@ let val_to_e (Env.Val value : Env.value) = value ;;
 
 let unopeval (uop : unop) (Env.Val e : Env.value) : Env.value =
   match uop, e with
-  | Negate, Num x -> Env.Val (Num (~- x))
+  | Negate, Num a -> Env.Val (Num (~- a))
+  | Negate, Float b -> Env.Val (Float (~-. b))
   | Negate, _ -> raise (EvalError "cannot be negated") ;;
 
 let binopeval (bin : binop) (Env.Val e1 : Env.value) (Env.Val e2 : Env.value) : Env.value = 
   match bin, e1, e2 with
   (* Plus *)
   | Plus, Num x1, Num x2 -> Env.Val (Num (x1 + x2))
+  | Plus, Float x1, Float x2 -> Env.Val (Float (x1 +. x2))
   | Plus, _, _ -> raise (EvalError "Cateogry Error")
   (* Minus *)
   | Minus, Num x1, Num x2 -> Env.Val (Num (x1 - x2))
+  | Minus, Float x1, Float x2 -> Env.Val (Float (x1 -. x2))
   | Minus, _, _ -> raise (EvalError "Cateogry Error")
   (* Times *)
   | Times, Num x1, Num x2 -> Env.Val (Num (x1 * x2))
+  | Times, Float x1, Float x2 -> Env.Val (Float (x1 *. x2))
   | Times, _, _ -> raise (EvalError "Cateogry Error")
   (* Equals *)
   | Equals, Num x1, Num x2 -> Env.Val (Bool (x1 = x2))
+  | Equals, Float x1, Float x2 -> Env.Val (Bool (x1 = x2))
+  | Equals, String s1, String s2 -> Env.Val (Bool (s1 = s2))
   | Equals, Bool x1, Bool x2 -> Env.Val (Bool (x1 = x2))
   | Equals, _, _ -> raise (EvalError "Cateogry Error")
-  (* LessThan *)
+  (* Less Than *)
   | LessThan, Num x1, Num x2 -> Env.Val (Bool (x1 < x2))
+  | LessThan, Float x1, Float x2 -> Env.Val (Bool (x1 < x2))
   | LessThan, _, _ -> raise (EvalError "Cateogry Error")
 ;; 
 
@@ -149,7 +166,7 @@ let eval_s (_exp : expr) (_env : Env.env) : Env.value =
   let rec eval_s (_exp : expr) : Env.value =
     match _exp with
     | Var a -> raise (EvalError ("Unbound" ^ a))                    
-    | Num _ | Bool _ | Fun _ | Unassigned  -> Env.Val _exp                                                
+    | Num _ | Float _ | String _ | Bool _ | Fun _ | Unassigned  -> Env.Val _exp                                                
     | Unop (un, e1) -> unopeval un (eval_s e1)                
     | Binop (bin, e1, e2) -> binopeval bin (eval_s e1) (eval_s e2)     
     | Conditional (c, c1, c2) -> 
@@ -192,4 +209,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_s ;;
+let evaluate = eval_s ;; 
